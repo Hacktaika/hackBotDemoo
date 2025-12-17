@@ -4,8 +4,7 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from sqlalchemy.orm import Session
-from sqlalchemy import not_
-from database.models import User, Gift, UserGift
+from database.models import User
 from database.db import get_db_session
 
 router = Router()
@@ -21,32 +20,12 @@ async def show_main_menu(message: Message, db: Session, user: User, edit: bool =
         user: Пользователь
         edit: Редактировать существующее сообщение вместо создания нового
     """
-    # Получаем ID подарков, которые пользователь уже получил
-    received_gifts = db.query(UserGift).filter(UserGift.user_id == user.id).all()
-    received_gift_ids = [ug.gift_id for ug in received_gifts]
-    
-    # Получаем доступные подарки
-    if received_gift_ids:
-        available_gifts = db.query(Gift).filter(
-            Gift.is_active == True
-        ).filter(
-            not_(Gift.id.in_(received_gift_ids))
-        ).order_by(Gift.order).all()
-    else:
-        available_gifts = db.query(Gift).filter(
-            Gift.is_active == True
-        ).order_by(Gift.order).all()
-    
     # Формируем кнопки
     keyboard_buttons = []
     
     # Информационные кнопки
-    keyboard_buttons.append([InlineKeyboardButton(text="ℹ️ ХакТайка", callback_data="info_hacktaika")])
+    keyboard_buttons.append([InlineKeyboardButton(text="🦅 ХакТайка", callback_data="info_hacktaika")])
     keyboard_buttons.append([InlineKeyboardButton(text="👤 Основатель", callback_data="info_founder")])
-    
-    # Кнопки подарков
-    for gift in available_gifts:
-        keyboard_buttons.append([InlineKeyboardButton(text=f"🎁 {gift.name}", callback_data=f"gift_{gift.id}")])
     
     # Кнопка викторины
     keyboard_buttons.append([InlineKeyboardButton(text="🎯 ПОЛУЧИТЬ БОНУС", callback_data="quiz_start")])
@@ -58,8 +37,7 @@ async def show_main_menu(message: Message, db: Session, user: User, edit: bool =
         "Здесь ты можешь:\n"
         "• Узнать больше о ХакТайке\n"
         "• Познакомиться с основателем\n"
-        "• Получить подарки и бонусы\n"
-        "• Пройти викторину\n\n"
+        "• Получить бонусы\n\n"
         "Выбери, что тебя интересует:"
     )
     
@@ -69,7 +47,6 @@ async def show_main_menu(message: Message, db: Session, user: User, edit: bool =
             await message.edit_text(text, reply_markup=keyboard)
             return
         except Exception:
-            # Если не удалось отредактировать, отправляем новое
             pass
     
     # Отправляем новое сообщение
@@ -85,8 +62,6 @@ async def back_to_menu(callback: CallbackQuery):
     try:
         user = db.query(User).filter(User.telegram_id == callback.from_user.id).first()
         if user:
-            # Редактируем существующее сообщение
             await show_main_menu(callback.message, db, user, edit=True)
     finally:
         db.close()
-

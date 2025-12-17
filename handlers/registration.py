@@ -12,6 +12,7 @@ from utils.validators import sanitize_input, check_channel_subscription
 from utils.keyboards import create_source_keyboard
 from utils.subscription import show_subscription_request
 from handlers.menu import show_main_menu
+from utils.video_notes import get_video_note
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -25,9 +26,32 @@ class RegistrationStates(StatesGroup):
     waiting_source = State()
 
 
+async def send_question(message: Message, state: FSMContext, video_note_key: str, text: str, keyboard=None):
+    """Отправить вопрос в зависимости от выбранного формата"""
+    data = await state.get_data()
+    survey_format = data.get("survey_format", "text")
+    video_note_id = get_video_note(video_note_key)
+    
+    if survey_format == "video" and video_note_id:
+        await message.answer_video_note(video_note=video_note_id)
+        if keyboard:
+            await message.answer("👆 Выбери вариант:", reply_markup=keyboard)
+    else:
+        await message.answer(text, reply_markup=keyboard)
+
+
 @router.message(RegistrationStates.waiting_name)
 async def process_name(message: Message, state: FSMContext):
     """Обработка имени"""
+    # Если получено видео, пропускаем вопрос
+    if message.video or message.video_note:
+        logger.info(f"📹 Получено видео, пропускаем вопрос имени для пользователя {message.from_user.id}")
+        default_name = message.from_user.first_name or "Пользователь"
+        await state.update_data(name=default_name)
+        await state.set_state(RegistrationStates.waiting_position)
+        await send_question(message, state, "position", "💼 Чем занимаешься? Какая должность в компании?")
+        return
+    
     name = sanitize_input(message.text)
     if not name or len(name) < 2:
         await message.answer("❌ Пожалуйста, введи свое имя (минимум 2 символа)")
@@ -35,12 +59,20 @@ async def process_name(message: Message, state: FSMContext):
     
     await state.update_data(name=name)
     await state.set_state(RegistrationStates.waiting_position)
-    await message.answer("💼 Чем занимаешься? Какая должность в компании?")
+    await send_question(message, state, "position", "💼 Чем занимаешься? Какая должность в компании?")
 
 
 @router.message(RegistrationStates.waiting_position)
 async def process_position(message: Message, state: FSMContext):
     """Обработка должности"""
+    # Если получено видео, пропускаем вопрос
+    if message.video or message.video_note:
+        logger.info(f"📹 Получено видео, пропускаем вопрос должности для пользователя {message.from_user.id}")
+        await state.update_data(position="Не указано")
+        await state.set_state(RegistrationStates.waiting_expectations)
+        await send_question(message, state, "expectations", "🎯 Что ты хочешь получить от этого бота? Какую пользу?")
+        return
+    
     position = sanitize_input(message.text)
     if not position or len(position) < 3:
         await message.answer("❌ Пожалуйста, укажи свою должность (минимум 3 символа)")
@@ -48,12 +80,22 @@ async def process_position(message: Message, state: FSMContext):
     
     await state.update_data(position=position)
     await state.set_state(RegistrationStates.waiting_expectations)
-    await message.answer("🎯 Что ты хочешь получить от этого бота? Какую пользу?")
+    await send_question(message, state, "expectations", "🎯 Что ты хочешь получить от этого бота? Какую пользу?")
 
 
 @router.message(RegistrationStates.waiting_expectations)
 async def process_expectations(message: Message, state: FSMContext):
     """Обработка ожиданий"""
+    keyboard = create_source_keyboard()
+    
+    # Если получено видео, пропускаем вопрос
+    if message.video or message.video_note:
+        logger.info(f"📹 Получено видео, пропускаем вопрос ожиданий для пользователя {message.from_user.id}")
+        await state.update_data(expectations="Не указано")
+        await state.set_state(RegistrationStates.waiting_source)
+        await send_question(message, state, "source", "📬 Как ты узнал о боте?", keyboard)
+        return
+    
     expectations = sanitize_input(message.text)
     if not expectations or len(expectations) < 5:
         await message.answer("❌ Пожалуйста, опиши свои ожидания подробнее (минимум 5 символов)")
@@ -61,13 +103,69 @@ async def process_expectations(message: Message, state: FSMContext):
     
     await state.update_data(expectations=expectations)
     await state.set_state(RegistrationStates.waiting_source)
-    
-    keyboard = create_source_keyboard()
-    
-    await message.answer(
-        "📬 Как ты узнал о боте?",
-        reply_markup=keyboard
-    )
+    await send_question(message, state, "source", "📬 Как ты узнал о боте?", keyboard)
+
+
+@router.message(RegistrationStates.waiting_source)
+async def process_source_video(message: Message, state: FSMContext):
+    """Обработка источника при получении видео"""
+    # Если получено видео, автоматически выбираем "Другие источники"
+    if message.video or message.video_note:
+        logger.info(f"📹 Получено видео, автоматически выбираем источник для пользователя {message.from_user.id}")
+        await state.update_data(source="Другие источники")
+        
+        # Завершаем опросник
+        data = await state.get_data()
+        user_id = message.from_user.id
+        logger.info(f"✅ Пользователь {user_id} завершил опросник")
+        
+        db = get_db_session()
+        
+        try:
+            # Сохраняем данные пользователя
+            user = db.query(User).filter(User.telegram_id == user_id).first()
+            
+            if not user:
+                logger.info(f"👤 Создание нового пользователя {user_id}")
+                user = User(
+                    telegram_id=user_id,
+                    username=message.from_user.username,
+                    first_name=message.from_user.first_name,
+                    last_name=message.from_user.last_name
+                )
+                db.add(user)
+            
+            user.name = data.get('name')
+            user.position = data.get('position')
+            user.expectations = data.get('expectations')
+            user.source = data.get('source')
+            user.is_registered = True
+            
+            db.commit()
+            logger.info(f"💾 Данные пользователя {user_id} сохранены")
+            
+            # Отправляем финальный кружочек (если видео-формат)
+            data_format = data.get("survey_format", "text")
+            finish_note = get_video_note("finish")
+            if data_format == "video" and finish_note:
+                await message.answer_video_note(video_note=finish_note)
+            
+            # Проверяем подписку после опроса
+            bot = message.bot
+            is_subscribed = await check_channel_subscription(bot, user_id)
+            
+            if is_subscribed:
+                user.is_subscribed = True
+                db.commit()
+                await show_main_menu(message, db, user, edit=False)
+            else:
+                user.is_subscribed = False
+                db.commit()
+                await show_subscription_request(message, bot, edit=False)
+                
+        finally:
+            db.close()
+            await state.clear()
 
 
 @router.callback_query(F.data.startswith("source_"))
@@ -116,23 +214,23 @@ async def process_source(callback: CallbackQuery, state: FSMContext):
         db.commit()
         logger.info(f"💾 Данные пользователя {user_id} сохранены")
         
-        # Проверяем подписку
+        # Отправляем финальный кружочек (если видео-формат)
+        finish_note = get_video_note("finish")
+        if data.get("survey_format") == "video" and finish_note:
+            await callback.message.answer_video_note(video_note=finish_note)
+        
+        # Проверяем подписку после опроса
         bot = callback.bot
-        logger.info(f"🔍 Проверка подписки пользователя {user_id}...")
         is_subscribed = await check_channel_subscription(bot, user_id)
         
         if is_subscribed:
-            logger.info(f"✅ Пользователь {user_id} подписан на оба канала")
             user.is_subscribed = True
             db.commit()
-            # Показываем меню, редактируя существующее сообщение
-            await show_main_menu(callback.message, db, user, edit=True)
+            await show_main_menu(callback.message, db, user, edit=False)
         else:
-            logger.info(f"⚠️ Пользователь {user_id} не подписан на каналы")
             user.is_subscribed = False
             db.commit()
-            # Отправляем сообщение с кнопками подписки (редактируем если возможно)
-            await show_subscription_request(callback.message, bot, edit=True)
+            await show_subscription_request(callback.message, bot, edit=False)
             
     finally:
         db.close()

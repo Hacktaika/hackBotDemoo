@@ -1,7 +1,7 @@
 """
 Управление контентом
 """
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -60,8 +60,11 @@ async def process_content_text(message: Message, state: FSMContext):
     """Обработка текста контента"""
     if message.text and message.text.strip() == "/skip":
         text = None
+        entities = None
     else:
-        text = message.text if message.text else None
+        # Сохраняем текст с HTML-форматированием
+        text = message.html_text if message.text else None
+        entities = None
     
     await state.update_data(text=text)
     await state.set_state(ContentStates.waiting_content_file)

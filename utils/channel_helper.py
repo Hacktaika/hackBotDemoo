@@ -52,3 +52,6 @@ async def verify_channel_access(bot: Bot, channel_id) -> bool:
         logger.error(f"❌ Бот не имеет доступа к каналу {channel_id}: {e}")
         return False
 
+
+
+

@@ -82,3 +82,27 @@ def load_settings() -> Settings:
 # Глобальный экземпляр настроек
 settings = load_settings()
 
+# Удобный доступ к списку админов
+ADMIN_IDS = settings.admin_ids_list
+
+# ===============================
+# КРУЖОЧКИ ДЛЯ ВОПРОСОВ РЕГИСТРАЦИИ
+# ===============================
+# Отправь кружочек боту (как админ), чтобы получить file_id
+# Затем вставь file_id сюда
+
+# Вопрос 1: "Как тебя зовут?"
+VIDEO_NOTE_NAME = "DQACAgIAAxkBAAMpaULIgzMAAe9PAS74iPaVTZwOtm6wAAI7kgACrRz4SQgLQTwPoHOxNgQ"
+
+# Вопрос 2: "Чем занимаешься? Какая должность?"
+VIDEO_NOTE_POSITION = "DQACAgIAAxkBAAMxaULVzuFcsZqg3kdmWvogptLapqMAAj2SAAKtHPhJ3PPLqcFazHQ2BA"
+
+# Вопрос 3: "Что хочешь получить от бота?"
+VIDEO_NOTE_EXPECTATIONS = "DQACAgIAAxkBAAMzaULV5XLgVvrhj37nivtoG73Z8YwAAj-SAAKtHPhJex2vmCavRKE2BA"
+
+# Вопрос 4: "Как узнал о боте?"
+VIDEO_NOTE_SOURCE = "DQACAgIAAxkBAAM1aULV9jRl3m7R6-551-34q3uOx-MAAkCSAAKtHPhJnotY15vd5YY2BA"
+
+# После завершения регистрации (перед меню/подпиской)
+VIDEO_NOTE_FINISH = "DQACAgIAAxkBAAM3aULWBUhUaODfSrgSyi34I0UP-E8AAkGSAAKtHPhJn36PVbkkPNQ2BA"
+

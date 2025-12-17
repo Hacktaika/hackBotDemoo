@@ -2,10 +2,8 @@
 Модели базы данных
 """
 from datetime import datetime
-from typing import Optional
-from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
@@ -39,9 +37,6 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Связи
-    received_gifts = relationship("UserGift", back_populates="user", cascade="all, delete-orphan")
-    
     def __repr__(self):
         return f"<User(telegram_id={self.telegram_id}, username={self.username})>"
 
@@ -61,45 +56,6 @@ class Content(Base):
     
     def __repr__(self):
         return f"<Content(keyword={self.keyword}, type={self.content_type})>"
-
-
-class Gift(Base):
-    """Модель подарка/бонуса"""
-    __tablename__ = 'gifts'
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(String(255), nullable=False)
-    description = Column(Text, nullable=True)
-    content_type = Column(String(50), nullable=False)  # text, photo, video, document
-    text = Column(Text, nullable=True)
-    file_id = Column(String(255), nullable=True)
-    is_active = Column(Boolean, default=True)
-    order = Column(Integer, default=0)  # Порядок отображения
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Связи
-    user_gifts = relationship("UserGift", back_populates="gift", cascade="all, delete-orphan")
-    
-    def __repr__(self):
-        return f"<Gift(name={self.name}, order={self.order})>"
-
-
-class UserGift(Base):
-    """Связь пользователя и подарка"""
-    __tablename__ = 'user_gifts'
-    
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    gift_id = Column(Integer, ForeignKey('gifts.id', ondelete='CASCADE'), nullable=False)
-    received_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Связи
-    user = relationship("User", back_populates="received_gifts")
-    gift = relationship("Gift", back_populates="user_gifts")
-    
-    def __repr__(self):
-        return f"<UserGift(user_id={self.user_id}, gift_id={self.gift_id})>"
 
 
 class InfoPage(Base):
@@ -134,4 +90,3 @@ class Broadcast(Base):
     
     def __repr__(self):
         return f"<Broadcast(id={self.id}, sent={self.sent_count})>"
-

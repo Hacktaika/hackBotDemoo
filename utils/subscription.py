@@ -27,3 +27,6 @@ async def show_subscription_request(message: Message, bot: Bot, edit: bool = Fal
         if not edit:  # Только если это не попытка редактирования
             await message.answer(text, reply_markup=keyboard)
 
+
+
+

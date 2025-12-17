@@ -33,6 +33,7 @@ def create_admin_keyboard() -> InlineKeyboardMarkup:
     """Создать клавиатуру админ-панели"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📢 Рассылка", callback_data="admin_broadcast")],
+        [InlineKeyboardButton(text="🎬 Кружочки опроса", callback_data="admin_video_notes")],
         [InlineKeyboardButton(text="➕ Добавить контент", callback_data="admin_add_content")],
         [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")]
     ])
@@ -46,4 +47,7 @@ def create_source_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="🌐 На сайте", callback_data="source_website")],
         [InlineKeyboardButton(text="🔗 Другие источники", callback_data="source_other")]
     ])
+
+
+
 
