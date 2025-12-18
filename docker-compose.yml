@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  hacktaika-bot:
+    build: .
+    container_name: hacktaika-bot
+    restart: unless-stopped
+    
+    # Кастомные порты (можно изменить под свои нужды)
+    # Если нужен веб-сервер для health check, можно добавить позже
+    ports:
+      - "8888:8888"  # Пример кастомного порта (если понадобится веб-сервер)
+    
+    # Переменные окружения из .env файла
+    env_file:
+      - .env
+    
+    # Монтирование директории с данными (БД и файлы)
+    volumes:
+      - ./data:/app/data
+    
+    # Логирование
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Ограничения ресурсов (опционально)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
