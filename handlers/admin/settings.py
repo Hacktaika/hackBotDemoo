@@ -136,3 +136,5 @@ async def process_menu_photo(message: Message, state: FSMContext):
     
     await state.clear()
 
+
+

@@ -57,6 +57,29 @@ DB_PATH=./data/bot.db
 python bot.py
 ```
 
+## Запуск через вебхуки (подготовка к Vercel)
+
+В репозитории добавлена webhook-версия бота для деплоя на Vercel:
+
+- `webhook_app.py` — общая инициализация бота и функция `process_update`, которая обрабатывает один апдейт Telegram.
+- `api/webhook.py` — serverless-эндпоинт для Vercel, вызывающий `process_update`.
+- `vercel.json` — базовая конфигурация функции на Vercel.
+
+Как использовать с Vercel (общая схема):
+
+1. **Залей репозиторий на GitHub / GitLab / Bitbucket**.
+2. **Подключи репозиторий к Vercel** и задеплой.
+3. **В настройках проекта на Vercel** задай переменные окружения:
+   - `BOT_TOKEN` и остальные из `.env` (DB_PATH и т.д.).
+4. После развёртывания получишь URL вида:
+   - `https://your-project.vercel.app/api/webhook`
+5. **Настрой вебхук в Telegram**:
+   - Выполни запрос (можно просто открыть в браузере):
+   - `https://api.telegram.org/bot<ТОКЕН>/setWebhook?url=https://your-project.vercel.app/api/webhook`
+   - Подставь свой токен и реальный домен проекта.
+
+`bot.py` по-прежнему можно запускать локально через polling (`python bot.py`), а для продакшен-хостинга на Vercel использовать вебхуки через `api/webhook.py`.
+
 ## Функционал
 
 ### Для пользователей:

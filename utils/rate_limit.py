@@ -200,3 +200,5 @@ def check_broadcast_rate_limit(user_id: int) -> Tuple[bool, str]:
         time_window=300   # за 5 минут
     )
 
+
+

@@ -56,3 +56,5 @@ def delete_video_note(key: str):
         del notes[key]
         with open(VIDEO_NOTES_FILE, 'w') as f:
             json.dump(notes, f, indent=2)
+
+
