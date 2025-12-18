@@ -35,6 +35,8 @@ def create_admin_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="📢 Рассылка", callback_data="admin_broadcast")],
         [InlineKeyboardButton(text="🎬 Кружочки опроса", callback_data="admin_video_notes")],
         [InlineKeyboardButton(text="➕ Добавить контент", callback_data="admin_add_content")],
+        [InlineKeyboardButton(text="📦 Демо проекты", callback_data="admin_demo_projects")],
+        [InlineKeyboardButton(text="⚙️ Настройки", callback_data="admin_settings")],
         [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")]
     ])
 

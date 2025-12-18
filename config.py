@@ -106,3 +106,9 @@ VIDEO_NOTE_SOURCE = "DQACAgIAAxkBAAM1aULV9jRl3m7R6-551-34q3uOx-MAAkCSAAKtHPhJnot
 # После завершения регистрации (перед меню/подпиской)
 VIDEO_NOTE_FINISH = "DQACAgIAAxkBAAM3aULWBUhUaODfSrgSyi34I0UP-E8AAkGSAAKtHPhJn36PVbkkPNQ2BA"
 
+# Фото для главного меню (укажите file_id после отправки фото боту)
+MENU_PHOTO_FILE_ID = "AgACAgIAAxkBAAPKaUM_5fGRkVh5yDacWpXyfv4Z4A0AAqsOaxsTtRlKViBtEyTb1o8BAAMCAAN4AAM2BA"
+
+# Дефолтные ссылки для демо проектов
+DEFAULT_DEMO_APP_URL = "https://t.me/fazora_bot"  # Ссылка на бот Фазаора
+

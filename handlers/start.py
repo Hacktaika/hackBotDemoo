@@ -51,6 +51,22 @@ async def get_photo_id(message: Message, state: FSMContext):
         logger.info(f"Photo file_id: {file_id}")
 
 
+@router.message(F.document)
+async def get_document_id(message: Message, state: FSMContext):
+    """Получить file_id документа/PDF (для админов)"""
+    current_state = await state.get_state()
+    if current_state is None and message.from_user.id in ADMIN_IDS:
+        file_id = message.document.file_id
+        file_name = message.document.file_name or "Неизвестно"
+        await message.answer(
+            f"📄 File ID документа:\n\n"
+            f"Имя файла: <code>{file_name}</code>\n"
+            f"File ID: <code>{file_id}</code>",
+            parse_mode="HTML"
+        )
+        logger.info(f"Document file_id: {file_id}, filename: {file_name}")
+
+
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
     """Обработка команды /start"""

@@ -17,8 +17,18 @@ logger = logging.getLogger(__name__)
 @router.callback_query(F.data == "check_subscription")
 async def check_subscription_handler(callback: CallbackQuery):
     """Проверка подписки"""
+    from utils.idempotency import is_duplicate_request, mark_request_processed
+    
     user_id = callback.from_user.id
     logger.info(f"🔍 Проверка подписки пользователя {user_id}")
+    
+    # Защита от повторных запросов
+    if is_duplicate_request(user_id, "check_subscription"):
+        logger.warning(f"🚫 Дубликат запроса проверки подписки от пользователя {user_id}")
+        await callback.answer("⏳ Запрос уже обрабатывается. Подождите немного.", show_alert=True)
+        return
+    
+    mark_request_processed(user_id, "check_subscription")
     
     db = get_db_session()
     try:

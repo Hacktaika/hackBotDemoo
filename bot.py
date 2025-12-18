@@ -16,6 +16,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from config import settings
 from database.db import init_db
+from middleware.rate_limit_middleware import RateLimitMiddleware
 from handlers.start import router as start_router
 from handlers.registration import router as registration_router
 from handlers.subscription import router as subscription_router
@@ -23,6 +24,8 @@ from handlers.menu import router as menu_router
 from handlers.info import router as info_router
 from handlers.quiz import router as quiz_router
 from handlers.content import router as content_router
+from handlers.demo_projects import router as demo_projects_router
+from handlers.pdf import router as pdf_router
 from handlers.admin import router as admin_router
 
 
@@ -46,6 +49,14 @@ async def main():
         
         dp = Dispatcher(storage=MemoryStorage())
         
+        # Регистрация middleware для защиты от спама
+        logger.info("🛡️ Регистрация middleware защиты...")
+        # В aiogram 3.x используем outer_middleware для глобальной защиты
+        rate_limit_middleware = RateLimitMiddleware()
+        dp.message.outer_middleware(rate_limit_middleware)
+        dp.callback_query.outer_middleware(rate_limit_middleware)
+        logger.info("✅ Middleware защиты зарегистрированы")
+        
         # Регистрация роутеров
         logger.info("📋 Регистрация обработчиков...")
         dp.include_router(admin_router)  # Админка первой!
@@ -54,6 +65,8 @@ async def main():
         dp.include_router(subscription_router)
         dp.include_router(menu_router)
         dp.include_router(info_router)
+        dp.include_router(demo_projects_router)
+        dp.include_router(pdf_router)
         dp.include_router(quiz_router)
         dp.include_router(content_router)  # Контент последним — ловит все текстовые сообщения
         logger.info("✅ Обработчики зарегистрированы")

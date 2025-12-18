@@ -1,9 +1,9 @@
 """
-Обработчик викторины (PDF файл)
+Обработчик раздачи PDF файла
 """
 import logging
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery
 from database.db import get_db_session
 from database.models import User
 from handlers.menu import show_main_menu
@@ -11,13 +11,14 @@ from handlers.menu import show_main_menu
 router = Router()
 logger = logging.getLogger(__name__)
 
-# File ID PDF файла
-PDF_FILE_ID = "BQACAgIAAxkBAAP5aUNJQ7VaoQeQxRxr9sHbZ4Dl1oYAAsKMAAITtRlKlzx11wpksy42BA"
+# File ID PDF файла (нужно будет получить, отправив файл боту)
+# После отправки PDF боту (как админ), получите file_id и укажите его здесь
+PDF_FILE_ID = None  # Замените на file_id после отправки PDF боту
 
 
-@router.callback_query(F.data == "quiz_start")
-async def send_pdf_bonus(callback: CallbackQuery):
-    """Отправить PDF файл как бонус"""
+@router.callback_query(F.data == "get_pdf")
+async def send_pdf(callback: CallbackQuery):
+    """Отправить PDF файл пользователю (только один раз)"""
     await callback.answer()
     
     user_id = callback.from_user.id
@@ -34,39 +35,27 @@ async def send_pdf_bonus(callback: CallbackQuery):
         if user.has_pdf:
             logger.info(f"⚠️ Пользователь {user_id} уже получил PDF")
             await callback.message.answer("✅ Вы уже получили PDF файл ранее.")
-            # Показываем меню
-            await show_main_menu(callback.message, db, user, edit=False)
             return
         
         # Проверяем наличие file_id
         if not PDF_FILE_ID:
-            logger.error("❌ PDF_FILE_ID не установлен в handlers/quiz.py")
+            logger.error("❌ PDF_FILE_ID не установлен в config")
             await callback.message.answer(
                 "❌ PDF файл временно недоступен. Обратитесь к администратору."
             )
             return
         
-        # Сохраняем chat_id перед удалением
-        chat_id = callback.message.chat.id
-        
-        # Пытаемся удалить старое сообщение
+        # Отправляем PDF
         try:
             await callback.message.delete()
         except:
             pass
         
-        # Отправляем PDF
-        await callback.message.bot.send_document(
-            chat_id=chat_id,
+        await callback.message.answer_document(
             document=PDF_FILE_ID,
             caption=(
                 "📄 <b>Скрытые ловушки в IT-разработке, о которых молчат 90% агентств</b>\n\n"
                 "Практический гид по управлению IT-проектами и минимизации рисков.\n\n"
-                "В этом PDF вы узнаете:\n"
-                "• Как распознать заниженную смету и размытое ТЗ\n"
-                "• Почему технический долг — это кредит под 300% годовых\n"
-                "• Как требовать качественное тестирование и безопасность\n"
-                "• Как избежать vendor lock-in и вечных доплат\n\n"
                 "Спасибо за интерес!"
             ),
             parse_mode="HTML"
@@ -76,18 +65,14 @@ async def send_pdf_bonus(callback: CallbackQuery):
         user.has_pdf = True
         db.commit()
         
-        logger.info(f"✅ Пользователь {user_id} получил PDF файл через викторину")
+        logger.info(f"✅ Пользователь {user_id} получил PDF файл")
         
-        # Показываем меню после отправки PDF
-        temp_message = await callback.message.bot.send_message(chat_id=chat_id, text="⏳")
-        await show_main_menu(temp_message, db, user, edit=True)
+        # Обновляем меню (кнопка PDF исчезнет)
+        await show_main_menu(callback.message, db, user, edit=False)
         
     except Exception as e:
         logger.error(f"❌ Ошибка при отправке PDF пользователю {user_id}: {e}", exc_info=True)
         await callback.message.answer("❌ Произошла ошибка при отправке PDF. Попробуйте позже.")
     finally:
         db.close()
-
-
-
 

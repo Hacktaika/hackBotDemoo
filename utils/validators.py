@@ -181,17 +181,49 @@ def validate_text(text: str, max_length: int = 4096) -> bool:
     return True
 
 
-def sanitize_input(text: str) -> str:
+def sanitize_input(text: str, max_length: int = 1000) -> str:
     """
     Очистка пользовательского ввода
     
     Args:
         text: Входной текст
+        max_length: Максимальная длина
         
     Returns:
         Очищенный текст
     """
     if not text:
         return ""
-    return text.strip()[:1000]  # Ограничение длины
+    # Убираем лишние пробелы и ограничиваем длину
+    cleaned = text.strip()[:max_length]
+    # Удаляем потенциально опасные символы (базовая защита)
+    cleaned = cleaned.replace('\x00', '')  # Null bytes
+    return cleaned
+
+
+def validate_message_size(message) -> bool:
+    """
+    Валидация размера сообщения
+    
+    Args:
+        message: Объект сообщения
+        
+    Returns:
+        True если размер допустим, иначе False
+    """
+    # Проверка текста
+    if message.text and len(message.text) > 4096:
+        return False
+    
+    # Проверка caption
+    if message.caption and len(message.caption) > 1024:
+        return False
+    
+    # Проверка размера файлов (если есть)
+    if hasattr(message, 'document') and message.document:
+        # Максимальный размер файла 50MB (Telegram limit)
+        if message.document.file_size and message.document.file_size > 50 * 1024 * 1024:
+            return False
+    
+    return True
 

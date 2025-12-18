@@ -28,6 +28,7 @@ class User(Base):
     is_registered = Column(Boolean, default=False)
     is_subscribed = Column(Boolean, default=False)
     has_bonus = Column(Boolean, default=False)
+    has_pdf = Column(Boolean, default=False)  # Получил ли PDF файл
     is_active = Column(Boolean, default=True)
     
     # Админ
@@ -90,3 +91,22 @@ class Broadcast(Base):
     
     def __repr__(self):
         return f"<Broadcast(id={self.id}, sent={self.sent_count})>"
+
+
+class DemoProject(Base):
+    """Модель демо проекта"""
+    __tablename__ = 'demo_projects'
+    
+    id = Column(Integer, primary_key=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)  # Описание с markdown
+    photo_file_id = Column(String(255), nullable=True)
+    app_url = Column(String(500), nullable=True)  # Ссылка на приложение/бота
+    channel_url = Column(String(500), nullable=True)  # Ссылка на канал
+    order_index = Column(Integer, default=0)  # Порядок отображения
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<DemoProject(id={self.id}, title={self.title})>"

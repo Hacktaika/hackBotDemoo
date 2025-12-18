@@ -19,9 +19,8 @@ async def cmd_admin(message: Message):
     logger.info(f"📋 /admin от пользователя {message.from_user.id}")
     
     if not is_admin(message.from_user.id):
-        logger.info(f"❌ Пользователь {message.from_user.id} не админ")
-        await message.answer("❌ У тебя нет прав администратора")
-        return
+        logger.info(f"❌ Пользователь {message.from_user.id} не админ - игнорируем")
+        return  # Игнорируем, не отвечаем
     
     logger.info(f"✅ Показываем админ-панель для {message.from_user.id}")
     keyboard = create_admin_keyboard()

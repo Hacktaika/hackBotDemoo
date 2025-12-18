@@ -8,7 +8,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from database.db import get_db_session
 from database.models import User
-from utils.validators import sanitize_input, check_channel_subscription
+from utils.validators import sanitize_input, check_channel_subscription, validate_message_size
+from utils.rate_limit import check_registration_rate_limit
 from utils.keyboards import create_source_keyboard
 from utils.subscription import show_subscription_request
 from handlers.menu import show_main_menu
@@ -43,18 +44,40 @@ async def send_question(message: Message, state: FSMContext, video_note_key: str
 @router.message(RegistrationStates.waiting_name)
 async def process_name(message: Message, state: FSMContext):
     """Обработка имени"""
+    user_id = message.from_user.id
+    
+    # Проверка rate limit
+    allowed, error_msg = check_registration_rate_limit(user_id)
+    if not allowed:
+        logger.warning(f"🚫 Пользователь {user_id} превысил лимит регистрации")
+        await message.answer(error_msg)
+        return
+    
+    # Валидация размера сообщения
+    if not validate_message_size(message):
+        await message.answer("❌ Сообщение слишком большое. Пожалуйста, отправь более короткий текст.")
+        return
+    
     # Если получено видео, пропускаем вопрос
     if message.video or message.video_note:
-        logger.info(f"📹 Получено видео, пропускаем вопрос имени для пользователя {message.from_user.id}")
+        logger.info(f"📹 Получено видео, пропускаем вопрос имени для пользователя {user_id}")
         default_name = message.from_user.first_name or "Пользователь"
         await state.update_data(name=default_name)
         await state.set_state(RegistrationStates.waiting_position)
         await send_question(message, state, "position", "💼 Чем занимаешься? Какая должность в компании?")
         return
     
-    name = sanitize_input(message.text)
+    if not message.text:
+        await message.answer("❌ Пожалуйста, отправь текстовое сообщение")
+        return
+    
+    name = sanitize_input(message.text, max_length=100)
     if not name or len(name) < 2:
         await message.answer("❌ Пожалуйста, введи свое имя (минимум 2 символа)")
+        return
+    
+    if len(name) > 100:
+        await message.answer("❌ Имя слишком длинное. Максимум 100 символов.")
         return
     
     await state.update_data(name=name)
@@ -65,6 +88,11 @@ async def process_name(message: Message, state: FSMContext):
 @router.message(RegistrationStates.waiting_position)
 async def process_position(message: Message, state: FSMContext):
     """Обработка должности"""
+    # Валидация размера сообщения
+    if not validate_message_size(message):
+        await message.answer("❌ Сообщение слишком большое. Пожалуйста, отправь более короткий текст.")
+        return
+    
     # Если получено видео, пропускаем вопрос
     if message.video or message.video_note:
         logger.info(f"📹 Получено видео, пропускаем вопрос должности для пользователя {message.from_user.id}")
@@ -73,9 +101,17 @@ async def process_position(message: Message, state: FSMContext):
         await send_question(message, state, "expectations", "🎯 Что ты хочешь получить от этого бота? Какую пользу?")
         return
     
-    position = sanitize_input(message.text)
+    if not message.text:
+        await message.answer("❌ Пожалуйста, отправь текстовое сообщение")
+        return
+    
+    position = sanitize_input(message.text, max_length=200)
     if not position or len(position) < 3:
         await message.answer("❌ Пожалуйста, укажи свою должность (минимум 3 символа)")
+        return
+    
+    if len(position) > 200:
+        await message.answer("❌ Описание должности слишком длинное. Максимум 200 символов.")
         return
     
     await state.update_data(position=position)
@@ -88,6 +124,11 @@ async def process_expectations(message: Message, state: FSMContext):
     """Обработка ожиданий"""
     keyboard = create_source_keyboard()
     
+    # Валидация размера сообщения
+    if not validate_message_size(message):
+        await message.answer("❌ Сообщение слишком большое. Пожалуйста, отправь более короткий текст.")
+        return
+    
     # Если получено видео, пропускаем вопрос
     if message.video or message.video_note:
         logger.info(f"📹 Получено видео, пропускаем вопрос ожиданий для пользователя {message.from_user.id}")
@@ -96,9 +137,17 @@ async def process_expectations(message: Message, state: FSMContext):
         await send_question(message, state, "source", "📬 Как ты узнал о боте?", keyboard)
         return
     
-    expectations = sanitize_input(message.text)
+    if not message.text:
+        await message.answer("❌ Пожалуйста, отправь текстовое сообщение")
+        return
+    
+    expectations = sanitize_input(message.text, max_length=500)
     if not expectations or len(expectations) < 5:
         await message.answer("❌ Пожалуйста, опиши свои ожидания подробнее (минимум 5 символов)")
+        return
+    
+    if len(expectations) > 500:
+        await message.answer("❌ Описание слишком длинное. Максимум 500 символов.")
         return
     
     await state.update_data(expectations=expectations)

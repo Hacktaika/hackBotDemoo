@@ -6,6 +6,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from sqlalchemy.orm import Session
 from database.models import User
 from database.db import get_db_session
+from config import MENU_PHOTO_FILE_ID
 
 router = Router()
 
@@ -27,8 +28,12 @@ async def show_main_menu(message: Message, db: Session, user: User, edit: bool =
     keyboard_buttons.append([InlineKeyboardButton(text="🦅 ХакТайка", callback_data="info_hacktaika")])
     keyboard_buttons.append([InlineKeyboardButton(text="👤 Основатель", callback_data="info_founder")])
     
-    # Кнопка викторины
-    keyboard_buttons.append([InlineKeyboardButton(text="🎯 ПОЛУЧИТЬ БОНУС", callback_data="quiz_start")])
+    # Кнопка демо проектов
+    keyboard_buttons.append([InlineKeyboardButton(text="📦 Демо проекты", callback_data="demo_projects")])
+    
+    # Кнопка викторины (PDF бонус) - только если пользователь еще не получил
+    if not user.has_pdf:
+        keyboard_buttons.append([InlineKeyboardButton(text="🎯 ПОЛУЧИТЬ БОНУС", callback_data="quiz_start")])
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
     
@@ -37,6 +42,7 @@ async def show_main_menu(message: Message, db: Session, user: User, edit: bool =
         "Здесь ты можешь:\n"
         "• Узнать больше о ХакТайке\n"
         "• Познакомиться с основателем\n"
+        "• Посмотреть демо проекты\n"
         "• Получить бонусы\n\n"
         "Выбери, что тебя интересует:"
     )
@@ -44,13 +50,30 @@ async def show_main_menu(message: Message, db: Session, user: User, edit: bool =
     # Пытаемся отредактировать существующее сообщение, если указано
     if edit:
         try:
-            await message.edit_text(text, reply_markup=keyboard)
-            return
+            # Если есть фото, удаляем старое сообщение и отправляем новое с фото
+            if MENU_PHOTO_FILE_ID:
+                await message.delete()
+                await message.answer_photo(
+                    photo=MENU_PHOTO_FILE_ID,
+                    caption=text,
+                    reply_markup=keyboard
+                )
+                return
+            else:
+                await message.edit_text(text, reply_markup=keyboard)
+                return
         except Exception:
             pass
     
     # Отправляем новое сообщение
-    await message.answer(text, reply_markup=keyboard)
+    if MENU_PHOTO_FILE_ID:
+        await message.answer_photo(
+            photo=MENU_PHOTO_FILE_ID,
+            caption=text,
+            reply_markup=keyboard
+        )
+    else:
+        await message.answer(text, reply_markup=keyboard)
 
 
 @router.callback_query(F.data == "menu_main")

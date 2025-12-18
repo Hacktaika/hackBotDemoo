@@ -7,7 +7,8 @@ from aiogram.types import Message
 from database.db import get_db_session
 from database.models import Content, User
 from utils.messages import send_content
-from utils.validators import is_admin
+from utils.validators import is_admin, validate_message_size
+from utils.rate_limit import check_content_keyword_rate_limit
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -16,9 +17,31 @@ logger = logging.getLogger(__name__)
 @router.message(F.text)
 async def handle_keyword(message: Message):
     """Обработка ключевых слов"""
-    logger.info(f"🔍 Проверка ключевого слова: '{message.text}' от {message.from_user.id}")
+    user_id = message.from_user.id
+    logger.info(f"🔍 Проверка ключевого слова: '{message.text}' от {user_id}")
     
     if not message.text:
+        return
+    
+    # Валидация размера сообщения
+    if not validate_message_size(message):
+        logger.warning(f"🚫 Пользователь {user_id} отправил слишком большое сообщение")
+        return
+    
+    # Проверка rate limit для поиска по ключевым словам
+    if not is_admin(user_id):
+        allowed, error_msg = check_content_keyword_rate_limit(user_id)
+        if not allowed:
+            logger.warning(f"🚫 Пользователь {user_id} превысил лимит поиска по ключевым словам")
+            try:
+                await message.answer(error_msg)
+            except:
+                pass
+            return
+    
+    # Ограничение длины ключевого слова
+    if len(message.text) > 100:
+        logger.warning(f"🚫 Пользователь {user_id} отправил слишком длинное ключевое слово")
         return
     
     keyword = message.text.strip().lower()
